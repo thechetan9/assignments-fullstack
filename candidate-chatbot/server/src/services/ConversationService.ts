@@ -26,6 +26,15 @@ export class ConversationService {
       jobId
     };
     
+    // Add initial greeting message
+    const welcomeMessage: Message = {
+      id: uuidv4(),
+      role: 'assistant',
+      content: `Hello! I'm the recruitment assistant for ${sampleJobDescription.company}. I can answer your questions about the ${sampleJobDescription.title} position. How can I help you today?`,
+      timestamp: new Date()
+    };
+    
+    conversation.messages.push(welcomeMessage);
     this.conversations.set(conversation.id, conversation);
     return conversation;
   }
@@ -68,7 +77,11 @@ export class ConversationService {
       throw new Error(`Job description ${conversation.jobId} not found`);
     }
     
+    console.log(`Generating response for conversation ${conversationId}`);
+    
     const responseContent = await this.llmService.generateResponse(conversation, jobDescription);
+    console.log(`Generated response: ${responseContent}`);
+    
     return this.addMessage(conversationId, responseContent, 'assistant');
   }
   
@@ -82,21 +95,51 @@ export class ConversationService {
   }
   
   private updateCandidateProfile(conversation: Conversation): void {
-    // Merge extractions into the candidate profile
+    // Create a new profile object to avoid direct mutation
+    const updatedProfile: CandidateProfile = { ...conversation.candidateProfile };
+    
+    // Process each extraction
     for (const extraction of conversation.extractions) {
-      if (extraction.field === 'skills') {
-        // Handle arrays specially
-        const currentSkills = conversation.candidateProfile.skills || [];
-        const newSkills = extraction.value.filter(
-          (skill: string) => !currentSkills.includes(skill)
-        );
-        conversation.candidateProfile.skills = [...currentSkills, ...newSkills];
-      } else {
-        // For simple fields, just update if confidence is high enough
-        if (extraction.confidence > 0.6) {
-          (conversation.candidateProfile as any)[extraction.field] = extraction.value;
+      const { field, value, confidence } = extraction;
+      
+      // Only update if confidence is high enough
+      if (confidence < 0.6) continue;
+      
+      // Handle array fields specially
+      if (field === 'skills') {
+        const currentSkills = updatedProfile.skills || [];
+        // Filter out duplicates
+        const newSkills = Array.isArray(value) 
+          ? value.filter(skill => !currentSkills.includes(skill))
+          : [];
+        updatedProfile.skills = [...currentSkills, ...newSkills];
+      } 
+      // Handle numeric fields
+      else if (field === 'yearsOfExperience') {
+        // Only update if the new value is more specific or higher confidence
+        if (!updatedProfile.yearsOfExperience || confidence > 0.8) {
+          updatedProfile.yearsOfExperience = Number(value);
+        }
+      }
+      // Handle other fields
+      else {
+        // Only update if field is empty or new data has higher confidence
+        const existingConfidence = this.getExtractionConfidence(conversation, field);
+        if (existingConfidence === 0 || confidence > existingConfidence) {
+          (updatedProfile as any)[field] = value;
         }
       }
     }
+    
+    // Update the conversation's candidate profile
+    conversation.candidateProfile = updatedProfile;
+  }
+  
+  // Helper to find the highest confidence for a given field
+  private getExtractionConfidence(conversation: Conversation, field: string): number {
+    const relevantExtractions = conversation.extractions.filter(e => e.field === field);
+    if (relevantExtractions.length === 0) return 0;
+    
+    return Math.max(...relevantExtractions.map(e => e.confidence));
   }
 }

@@ -1,65 +1,105 @@
 import { CandidateProfile, ProfileExtraction } from '../models/CandidateProfile';
 import { Conversation, Message } from '../models/Conversation';
 import { JobDescription } from '../models/JobDescription';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export class LlmService {
-  private apiKey: string;
+  private genAI: GoogleGenerativeAI;
   
   constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    this.genAI = new GoogleGenerativeAI(apiKey);
   }
   
   async generateResponse(conversation: Conversation, jobDescription: JobDescription): Promise<string> {
-    // In a real implementation, this would call an LLM API like OpenAI
-    // For this demo, we'll simulate the response
-    
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
-    
-    // Simple response logic based on keywords
-    if (lastMessage.content.toLowerCase().includes('salary')) {
-      return `The ${jobDescription.title} position offers a competitive salary along with ${jobDescription.benefits.join(', ').toLowerCase()}.`;
+    try {
+      // Get the Gemini model
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      
+      // Format conversation history for the LLM
+      const systemPrompt = `You are a helpful recruitment assistant for ${jobDescription.company}. 
+        Your job is to answer questions about the ${jobDescription.title} position.
+        Be concise, friendly, and informative. Only answer questions related to the job.
+        Job details: ${JSON.stringify(jobDescription)}`;
+      
+      console.log("Generating response for conversation:", conversation.id);
+      
+      // Format the conversation history
+      const chatHistory = conversation.messages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+      
+      // Start a chat session
+      const chat = model.startChat({
+        history: chatHistory.slice(0, -1), // Exclude the latest message
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 300,
+        },
+      });
+      
+      // Get the latest user message
+      const latestMessage = conversation.messages[conversation.messages.length - 1];
+      console.log("Latest message:", latestMessage.content);
+      
+      // Generate response
+      const result = await chat.sendMessage(
+        `${systemPrompt}\n\nUser message: ${latestMessage.content}`
+      );
+      
+      const responseText = result.response.text();
+      console.log("Generated response:", responseText);
+      return responseText;
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
+      return `I apologize, but I'm having trouble generating a response right now. Can you please try again?`;
     }
-    
-    if (lastMessage.content.toLowerCase().includes('requirements')) {
-      return `For the ${jobDescription.title} role, we're looking for candidates with: ${jobDescription.requirements.join(', ')}.`;
-    }
-    
-    // Default response
-    return `Thanks for your interest in the ${jobDescription.title} position at ${jobDescription.company}. How can I help you with more specific information about the role?`;
   }
   
   async extractCandidateInfo(message: Message): Promise<ProfileExtraction[]> {
-    // In a real implementation, this would use an LLM to extract structured information
-    // For this demo, we'll use simple pattern matching
-    
-    const extractions: ProfileExtraction[] = [];
-    const content = message.content.toLowerCase();
-    
-    // Simple extraction examples
-    if (content.includes('experience') && /\d+\s+years?/.test(content)) {
-      const years = parseInt(content.match(/(\d+)\s+years?/)?.[1] || '0');
-      extractions.push({
-        field: 'yearsOfExperience',
-        value: years,
-        confidence: 0.8,
-        source: message.content
-      });
-    }
-    
-    if (content.includes('react') || content.includes('node') || content.includes('typescript')) {
-      const skills = [];
-      if (content.includes('react')) skills.push('React');
-      if (content.includes('node')) skills.push('Node.js');
-      if (content.includes('typescript')) skills.push('TypeScript');
+    try {
+      // Get the Gemini model
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       
-      extractions.push({
-        field: 'skills',
-        value: skills,
-        confidence: 0.7,
-        source: message.content
-      });
+      // Prepare the prompt for information extraction
+      const prompt = `
+        Extract the following information from the candidate's message if present:
+        - name
+        - email
+        - currentRole
+        - yearsOfExperience (as a number)
+        - skills (as an array of strings)
+        - education
+        - location
+        - expectedSalary
+        
+        Message: "${message.content}"
+        
+        Return ONLY a JSON object with the extracted fields and confidence scores (0.0-1.0).
+        Example: { "extractions": [{ "field": "skills", "value": ["JavaScript", "React"], "confidence": 0.9 }] }
+      `;
+      
+      // Generate response
+      const result = await model.generateContent(prompt);
+      const content = result.response.text();
+      
+      // Parse the JSON response
+      try {
+        const parsedResponse = JSON.parse(content);
+        const extractions = parsedResponse.extractions || [];
+        
+        // Add source to each extraction
+        return extractions.map((extraction: any) => ({
+          ...extraction,
+          source: message.content
+        }));
+      } catch (parseError) {
+        console.error('Error parsing LLM response:', parseError);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error calling Gemini API for extraction:', error);
+      return [];
     }
-    
-    return extractions;
   }
 }

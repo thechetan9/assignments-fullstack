@@ -106,6 +106,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setLoading(true);
     
     try {
+      console.log("Sending message to server:", content);
+      
       // Send the message to the conversation
       const response = await fetch(`http://localhost:3001/api/conversations/${conversationId}/messages`, {
         method: 'POST',
@@ -120,7 +122,10 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       }
       
       const conversation = await response.json();
+      console.log("Received response from server:", conversation);
+      
       const botMessage = conversation.messages[conversation.messages.length - 1];
+      console.log("Bot message:", botMessage);
       
       // Add bot response to chat
       setMessages(prevMessages => [...prevMessages, { 
