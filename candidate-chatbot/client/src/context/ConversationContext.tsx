@@ -55,14 +55,10 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   useEffect(() => {
     const initConversation = async () => {
       try {
-        console.log('Initializing conversation with job ID:', jobId);
-        
         // First check if server is running
         try {
           await fetch('http://localhost:3001/api/health');
         } catch (error) {
-          console.error('Server connection error:', error);
-          // Add a welcome message even if server is down
           setMessages([{ 
             text: 'Welcome! I am the candidate chatbot. It seems our server is currently unavailable. Please try again later.', 
             sender: 'bot' as const 
@@ -79,12 +75,11 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to start conversation: ${response.status} ${response.statusText}`);
+          throw new Error(`Failed to start conversation: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('Conversation initialized:', data);
-        setConversationId(data.id); // Use data.id directly
+        setConversationId(data.id);
         
         // Add welcome message from the response
         if (data.messages && data.messages.length > 0) {
@@ -100,10 +95,9 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
           }]);
         }
       } catch (error) {
-        console.error('Error initializing conversation:', error);
         // Add error message
         setMessages([{ 
-          text: 'Sorry, there was an error initializing the conversation. ' + (error as Error).message, 
+          text: 'Sorry, there was an error initializing the conversation. Please refresh the page.', 
           sender: 'bot' as const 
         }]);
       }
@@ -112,39 +106,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     initConversation();
   }, [jobId]);
 
-  // Fetch profile when conversation updates
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!conversationId) return;
-      
-      try {
-        console.log(`Fetching profile for conversation: ${conversationId}`);
-        const response = await fetch(`http://localhost:3001/api/conversations/${conversationId}/profile`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Fetched profile data:', data);
-          if (data && data.profile) {
-            setCandidateProfile(data.profile);
-          } else {
-            console.error('Profile data is missing or invalid:', data);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Failed to fetch profile:', response.status, errorText);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      }
-    };
-    
-    fetchProfile();
-  }, [conversationId, messages.length]); // Add messages.length as dependency to update when messages change
-
   const sendMessage = async (content: string) => {
     if (content.trim() === '' || !conversationId || loading) return;
-    
-    console.log("Starting to send message:", content);
     
     // Add user message to chat immediately
     const userMessage = { text: content, sender: 'user' as const };
@@ -152,8 +115,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setLoading(true);
     
     try {
-      console.log(`Sending message to server at http://localhost:3001/api/conversations/${conversationId}/messages`);
-      
       // Send the message to the conversation
       const response = await fetch(`http://localhost:3001/api/conversations/${conversationId}/messages`, {
         method: 'POST',
@@ -163,26 +124,24 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         body: JSON.stringify({ content }),
       });
       
-      console.log("Response status:", response.status);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        throw new Error(`Failed to send message: ${response.status} ${errorText}`);
+        throw new Error(`Failed to send message: ${response.status}`);
       }
       
       const conversation = await response.json();
-      console.log("Full conversation response:", conversation);
       
       if (!conversation.messages || conversation.messages.length === 0) {
         throw new Error('No messages returned from server');
       }
       
+      // Update candidate profile from the conversation response
+      if (conversation.candidateProfile) {
+        setCandidateProfile(conversation.candidateProfile);
+      }
+      
       // Find the latest bot message
       const botMessages = conversation.messages.filter((msg: { role: string; }) => msg.role === 'assistant');
       const botMessage = botMessages[botMessages.length - 1];
-      
-      console.log("Latest bot message:", botMessage);
       
       if (botMessage) {
         // Add bot response to chat
@@ -194,10 +153,9 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         throw new Error('No bot response found in conversation');
       }
     } catch (error) {
-      console.error('Error in sendMessage:', error);
       // Add error message
       setMessages(prevMessages => [...prevMessages, { 
-        text: 'Sorry, there was an error processing your request. ' + (error as Error).message, 
+        text: 'Sorry, there was an error processing your request. Please try again.', 
         sender: 'bot' as const
       }]);
     } finally {

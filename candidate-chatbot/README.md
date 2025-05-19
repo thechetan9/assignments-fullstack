@@ -1,6 +1,6 @@
 # Candidate Engagement Chatbot
 
-A specialized chatbot that engages job applicants with contextually relevant information while qualifying their fit.
+A specialized chatbot that engages job applicants with contextually relevant information while qualifying their fit. This application is designed to help recruiters screen candidates for a specific job. It uses a combination of natural language processing and machine learning to extract relevant information from the candidate's responses and build a structured profile.
 
 ## Features
 
@@ -9,12 +9,20 @@ A specialized chatbot that engages job applicants with contextually relevant inf
 - Automatic extraction of candidate information during conversation
 - Profile summary showing what the system learned about the candidate
 
+## Application Screenshots
+
+### Initial Chat Interface
+![Initial Chat Interface](./screenshots/initial-chat.png)
+
+### Conversation with Profile Building
+![Conversation with Profile Building](./screenshots/profile-building.png)
+
 ## Technical Stack
 
 - **Frontend**: React with TypeScript
 - **Backend**: Node.js with Express and TypeScript
 - **State Management**: React Context API
-- **LLM Integration**: Simulated for demo purposes (can be replaced with OpenAI, Anthropic, etc.)
+- **LLM Integration**: Google's Gemini API
 
 ## Conversation Design Approach
 
@@ -37,9 +45,9 @@ The system extracts candidate information by:
 ## Technical Decisions and Tradeoffs
 
 - **React Context API vs Redux**: Used Context API for simplicity, though Redux would offer better scalability for larger applications
-- **Simulated LLM vs Real API**: Used a simulated LLM for demo purposes to avoid API costs and dependencies
+- **Google Gemini API vs OpenAI**: Used Gemini for its strong performance in structured data extraction
 - **In-memory Storage vs Database**: Used in-memory storage for simplicity, though a real application would use a database
-- **Simple Pattern Matching vs NLP**: Used simple pattern matching for extraction, though a real application would use more sophisticated NLP
+- **Confidence-based Extraction vs Rule-based**: Used confidence scores to determine which information to keep, allowing for more flexible extraction
 
 ## Setup Instructions
 
@@ -47,6 +55,7 @@ The system extracts candidate information by:
 
 - Node.js (v14 or higher)
 - npm or yarn
+- Google Gemini API key
 
 ### Installation
 
@@ -70,7 +79,7 @@ The system extracts candidate information by:
 3. Create a `.env` file in the server directory:
    ```
    PORT=3001
-   LLM_API_KEY=your_api_key_here  # Not needed for demo
+   GEMINI_API_KEY=your_api_key_here
    ```
 
 ### Running the Application
@@ -93,10 +102,28 @@ The system extracts candidate information by:
 
 With more time, the following enhancements could be made:
 
-1. Integration with a real LLM API (OpenAI, Anthropic, etc.)
-2. Database storage for conversations and candidate profiles
-3. More sophisticated information extraction using NLP
-4. Multi-job support with job-specific training
-5. Authentication and user management
-6. Analytics dashboard for recruiters
-7. Integration with ATS (Applicant Tracking System)
+1. **Improved Information Extraction**:
+   - More sophisticated NLP techniques for entity recognition
+   - Better handling of ambiguous or conflicting information
+   - Extraction of more nuanced information like soft skills and cultural fit
+
+2. **Enhanced Conversation Capabilities**:
+   - More natural conversation flow with better context management
+   - Proactive questions to fill gaps in candidate profile
+   - Personalized follow-up questions based on previous responses
+
+3. **Advanced Profile Building**:
+   - More sophisticated merging of information over time
+   - Confidence-based validation of extracted information
+   - Ability for candidates to review and correct extracted information
+
+4. **Integration and Scalability**:
+   - Database storage for conversations and profiles
+   - Integration with ATS (Applicant Tracking System)
+   - Support for multiple job descriptions
+   - Authentication and user management
+
+5. **Analytics and Insights**:
+   - Dashboard for recruiters to view candidate insights
+   - Comparative analysis of candidates
+   - Automated qualification scoring

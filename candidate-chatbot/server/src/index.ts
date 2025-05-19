@@ -55,12 +55,13 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
     }
     
     await conversationService.addMessage(conversationId, content, 'user');
-    const botMessage = await conversationService.generateResponse(conversationId);
+    await conversationService.generateResponse(conversationId);
     const conversation = conversationService.getConversation(conversationId);
     
     return res.status(200).json(conversation);
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message });
+    console.error('Error processing message:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
