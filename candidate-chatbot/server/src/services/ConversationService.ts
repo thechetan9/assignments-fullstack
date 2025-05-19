@@ -6,18 +6,25 @@ import { LlmService } from './LlmService';
 
 export class ConversationService {
   private conversations: Map<string, Conversation> = new Map();
-  private llmService: LlmService;
   private jobDescriptions: Map<string, JobDescription> = new Map();
-  
+  private llmService: LlmService;
+
   constructor(llmService: LlmService) {
     this.llmService = llmService;
     
     // Add sample job description
-    const jobId = uuidv4();
+    const jobId = "sample-job-id"; // Use a fixed ID instead of UUID
     this.jobDescriptions.set(jobId, sampleJobDescription);
+    console.log(`Added job description with ID: ${jobId}`);
   }
   
   createConversation(jobId: string): Conversation {
+    // Check if job ID exists, if not use the sample job ID
+    if (!this.jobDescriptions.has(jobId)) {
+      console.log(`Job ID ${jobId} not found, using sample job ID instead`);
+      jobId = "sample-job-id";
+    }
+    
     const conversation: Conversation = {
       id: uuidv4(),
       messages: [],
@@ -72,9 +79,10 @@ export class ConversationService {
       throw new Error(`Conversation ${conversationId} not found`);
     }
     
-    const jobDescription = this.jobDescriptions.get(conversation.jobId);
+    let jobDescription = this.jobDescriptions.get(conversation.jobId);
     if (!jobDescription) {
-      throw new Error(`Job description ${conversation.jobId} not found`);
+      console.log(`Job description ${conversation.jobId} not found, using sample job description`);
+      jobDescription = sampleJobDescription;
     }
     
     console.log(`Generating response for conversation ${conversationId}`);
@@ -141,5 +149,9 @@ export class ConversationService {
     if (relevantExtractions.length === 0) return 0;
     
     return Math.max(...relevantExtractions.map(e => e.confidence));
+  }
+
+  getJobDescriptions(): Map<string, JobDescription> {
+    return this.jobDescriptions;
   }
 }

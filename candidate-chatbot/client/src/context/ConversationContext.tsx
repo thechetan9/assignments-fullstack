@@ -55,6 +55,21 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   useEffect(() => {
     const initConversation = async () => {
       try {
+        console.log('Initializing conversation with job ID:', jobId);
+        
+        // First check if server is running
+        try {
+          await fetch('http://localhost:3001/api/health');
+        } catch (error) {
+          console.error('Server connection error:', error);
+          // Add a welcome message even if server is down
+          setMessages([{ 
+            text: 'Welcome! I am the candidate chatbot. It seems our server is currently unavailable. Please try again later.', 
+            sender: 'bot' as const 
+          }]);
+          return;
+        }
+        
         const response = await fetch('http://localhost:3001/api/conversations', {
           method: 'POST',
           headers: {
@@ -64,13 +79,33 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         });
         
         if (!response.ok) {
-          throw new Error('Failed to start conversation');
+          throw new Error(`Failed to start conversation: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
-        setConversationId(data.conversationId);
+        console.log('Conversation initialized:', data);
+        setConversationId(data.id); // Use data.id directly
+        
+        // Add welcome message from the response
+        if (data.messages && data.messages.length > 0) {
+          const welcomeMessage = data.messages[0];
+          setMessages([{ 
+            text: welcomeMessage.content, 
+            sender: welcomeMessage.role === 'user' ? 'user' : 'bot' as const 
+          }]);
+        } else {
+          setMessages([{ 
+            text: 'Welcome! I am the candidate chatbot. How can I help you today?', 
+            sender: 'bot' as const 
+          }]);
+        }
       } catch (error) {
         console.error('Error initializing conversation:', error);
+        // Add error message
+        setMessages([{ 
+          text: 'Sorry, there was an error initializing the conversation. ' + (error as Error).message, 
+          sender: 'bot' as const 
+        }]);
       }
     };
     
@@ -100,13 +135,15 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   const sendMessage = async (content: string) => {
     if (content.trim() === '' || !conversationId || loading) return;
     
-    // Add user message to chat
+    console.log("Starting to send message:", content);
+    
+    // Add user message to chat immediately
     const userMessage = { text: content, sender: 'user' as const };
-    setMessages([...messages, userMessage]);
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setLoading(true);
     
     try {
-      console.log("Sending message to server:", content);
+      console.log(`Sending message to server at http://localhost:3001/api/conversations/${conversationId}/messages`);
       
       // Send the message to the conversation
       const response = await fetch(`http://localhost:3001/api/conversations/${conversationId}/messages`, {
@@ -117,23 +154,38 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         body: JSON.stringify({ content }),
       });
       
+      console.log("Response status:", response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(`Failed to send message: ${response.status} ${errorText}`);
       }
       
       const conversation = await response.json();
-      console.log("Received response from server:", conversation);
+      console.log("Full conversation response:", conversation);
       
-      const botMessage = conversation.messages[conversation.messages.length - 1];
-      console.log("Bot message:", botMessage);
+      if (!conversation.messages || conversation.messages.length === 0) {
+        throw new Error('No messages returned from server');
+      }
       
-      // Add bot response to chat
-      setMessages(prevMessages => [...prevMessages, { 
-        text: botMessage.content, 
-        sender: 'bot' as const
-      }]);
+      // Find the latest bot message
+      const botMessages = conversation.messages.filter((msg: { role: string; }) => msg.role === 'assistant');
+      const botMessage = botMessages[botMessages.length - 1];
+      
+      console.log("Latest bot message:", botMessage);
+      
+      if (botMessage) {
+        // Add bot response to chat
+        setMessages(prevMessages => [...prevMessages, { 
+          text: botMessage.content, 
+          sender: 'bot' as const
+        }]);
+      } else {
+        throw new Error('No bot response found in conversation');
+      }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in sendMessage:', error);
       // Add error message
       setMessages(prevMessages => [...prevMessages, { 
         text: 'Sorry, there was an error processing your request. ' + (error as Error).message, 
