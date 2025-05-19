@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import ChatWindow from './components/ChatWindow';
 import CandidateProfile from './components/CandidateProfile';

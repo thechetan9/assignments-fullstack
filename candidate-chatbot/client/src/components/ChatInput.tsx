@@ -1,37 +1,45 @@
 import React, { useState } from 'react';
+import { useConversation } from '../context/ConversationContext';
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
   disabled?: boolean;
+  onSendMessage?: (content: string) => Promise<void>;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ 
-  onSendMessage, 
-  disabled = false 
-}): React.ReactElement => {
-  const [message, setMessage] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (message.trim() && !disabled) {
-      onSendMessage(message);
-      setMessage('');
+const ChatInput: React.FC<ChatInputProps> = ({ disabled = false, onSendMessage }) => {
+  const [input, setInput] = useState('');
+  const { sendMessage: contextSendMessage, loading } = useConversation();
+  
+  // Use the provided onSendMessage prop if available, otherwise use the context's sendMessage
+  const handleSend = async () => {
+    if (input.trim() === '' || disabled) return;
+    
+    if (onSendMessage) {
+      await onSendMessage(input);
+    } else {
+      await contextSendMessage(input);
     }
+    
+    setInput('');
   };
 
   return (
-    <form onSubmit={handleSubmit} className="chat-input">
+    <div className="input-area">
       <input
         type="text"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
         placeholder="Type your message here..."
         disabled={disabled}
       />
-      <button type="submit" disabled={disabled || !message.trim()}>
-        Send
+      <button 
+        onClick={handleSend} 
+        disabled={disabled || !input.trim() || loading}
+      >
+        {loading ? 'Sending...' : 'Send'}
       </button>
-    </form>
+    </div>
   );
 };
 

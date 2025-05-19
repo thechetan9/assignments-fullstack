@@ -5,11 +5,11 @@ interface ChatMessageProps {
   message: Message;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message }): React.ReactElement => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isBot = message.role === 'assistant';
   
   return (
-    <div className={`message ${isBot ? 'bot-message' : 'user-message'}`}>
+    <div className={`message ${isBot ? 'bot' : 'user'}`}>
       <div className="message-avatar">
         {isBot ? '🤖' : '👤'}
       </div>
