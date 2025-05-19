@@ -3,7 +3,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { useConversation } from '../context/ConversationContext';
 
-const ChatWindow: React.FC = () => {
+const ChatWindow: React.FC = (): React.ReactElement => {
   const { conversation, loading, sendMessage } = useConversation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

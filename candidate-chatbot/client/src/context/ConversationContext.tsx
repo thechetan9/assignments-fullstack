@@ -4,10 +4,10 @@ import * as api from '../services/api';
 
 interface ConversationContextType {
   conversation: Conversation | null;
+  candidateProfile: CandidateProfile | null;
   loading: boolean;
   error: string | null;
-  sendMessage: (message: string) => Promise<void>;
-  candidateProfile: CandidateProfile | null;
+  sendMessage: (content: string) => Promise<void>;
 }
 
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
@@ -17,86 +17,79 @@ interface ConversationProviderProps {
   jobId: string;
 }
 
-export const ConversationProvider: React.FC<ConversationProviderProps> = ({ children, jobId }) => {
+export const ConversationProvider: React.FC<ConversationProviderProps> = ({ 
+  children, 
+  jobId 
+}): React.ReactElement => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [candidateProfile, setCandidateProfile] = useState<CandidateProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // Initialize conversation
   useEffect(() => {
     const initConversation = async () => {
       try {
         setLoading(true);
-        const conversationId = await api.startConversation(jobId);
-        const conversationData = await api.getConversation(conversationId);
-        setConversation(conversationData);
-        setError(null);
+        const newConversation = await api.startConversation(jobId);
+        setConversation(newConversation);
+        setLoading(false);
       } catch (err) {
-        setError('Failed to initialize conversation');
-        console.error(err);
-      } finally {
+        setError('Failed to start conversation');
         setLoading(false);
       }
     };
-    
+
     initConversation();
   }, [jobId]);
-  
-  const sendMessage = async (message: string) => {
+
+  // Send a message
+  const sendMessage = async (content: string) => {
     if (!conversation) return;
-    
+
     try {
       setLoading(true);
       
-      // Optimistically update UI
-      const tempMessage: Message = {
-        id: `temp-${Date.now()}`,
+      // Add user message to UI immediately
+      const userMessage: Message = {
+        id: Date.now().toString(),
         role: 'user',
-        content: message,
-        timestamp: new Date(),
+        content,
+        timestamp: new Date().toISOString()
       };
       
-      setConversation(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [...prev.messages, tempMessage],
-        };
-      });
+      setConversation(prev => prev ? {
+        ...prev,
+        messages: [...prev.messages, userMessage]
+      } : null);
       
-      // Send to API
-      const botMessage = await api.sendMessage(conversation.id, message);
+      // Send to API and get response
+      const updatedConversation = await api.sendMessage(
+        conversation.id,
+        content
+      );
       
-      // Update with real data
-      setConversation(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [...prev.messages.filter(m => m.id !== tempMessage.id), tempMessage, botMessage],
-        };
-      });
+      setConversation(updatedConversation);
       
-      // Update candidate profile
+      // Update profile
       const profile = await api.getCandidateProfile(conversation.id);
       setCandidateProfile(profile);
       
-      setError(null);
+      setLoading(false);
     } catch (err) {
       setError('Failed to send message');
-      console.error(err);
-    } finally {
       setLoading(false);
     }
   };
-  
+
   return (
     <ConversationContext.Provider
       value={{
         conversation,
+        candidateProfile,
         loading,
         error,
-        sendMessage,
-        candidateProfile,
+        sendMessage
       }}
     >
       {children}
@@ -104,7 +97,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   );
 };
 
-export const useConversation = () => {
+export const useConversation = (): ConversationContextType => {
   const context = useContext(ConversationContext);
   if (context === undefined) {
     throw new Error('useConversation must be used within a ConversationProvider');

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useConversation } from '../context/ConversationContext';
 
-const CandidateProfile: React.FC = () => {
+const CandidateProfile: React.FC = (): React.ReactElement => {
   const { candidateProfile } = useConversation();
 
   if (!candidateProfile) {

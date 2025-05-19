@@ -1,8 +1,8 @@
-import { Conversation, Message, CandidateProfile } from '../types';
+import { Conversation, CandidateProfile } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_URL = 'http://localhost:3001/api';
 
-export const startConversation = async (jobId: string): Promise<string> => {
+export const startConversation = async (jobId: string): Promise<Conversation> => {
   const response = await fetch(`${API_URL}/conversations`, {
     method: 'POST',
     headers: {
@@ -10,50 +10,58 @@ export const startConversation = async (jobId: string): Promise<string> => {
     },
     body: JSON.stringify({ jobId }),
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to start conversation');
   }
-  
-  const data = await response.json();
-  return data.conversationId;
+
+  return response.json();
 };
 
-export const sendMessage = async (conversationId: string, message: string): Promise<Message> => {
-  const response = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message }),
-  });
-  
+export const sendMessage = async (
+  conversationId: string,
+  content: string
+): Promise<Conversation> => {
+  const response = await fetch(
+    `${API_URL}/conversations/${conversationId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content }),
+    }
+  );
+
   if (!response.ok) {
     throw new Error('Failed to send message');
   }
-  
-  const data = await response.json();
-  return data.message;
+
+  return response.json();
 };
 
-export const getConversation = async (conversationId: string): Promise<Conversation> => {
+export const getConversation = async (
+  conversationId: string
+): Promise<Conversation> => {
   const response = await fetch(`${API_URL}/conversations/${conversationId}`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to get conversation');
   }
-  
-  const data = await response.json();
-  return data.conversation;
+
+  return response.json();
 };
 
-export const getCandidateProfile = async (conversationId: string): Promise<CandidateProfile> => {
-  const response = await fetch(`${API_URL}/conversations/${conversationId}/profile`);
-  
+export const getCandidateProfile = async (
+  conversationId: string
+): Promise<CandidateProfile> => {
+  const response = await fetch(
+    `${API_URL}/conversations/${conversationId}/profile`
+  );
+
   if (!response.ok) {
     throw new Error('Failed to get candidate profile');
   }
-  
-  const data = await response.json();
-  return data.profile;
+
+  return response.json();
 };

@@ -2,7 +2,7 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
 export interface CandidateProfile {
@@ -12,16 +12,14 @@ export interface CandidateProfile {
   yearsOfExperience?: number;
   skills?: string[];
   education?: string;
-  interests?: string[];
-  availability?: string;
-  expectedSalary?: string;
   location?: string;
-  workAuthorization?: string;
-  questions?: string[];
+  expectedSalary?: string;
 }
 
 export interface Conversation {
   id: string;
+  jobId: string;
   messages: Message[];
-  candidateProfile: CandidateProfile;
+  createdAt: string;
+  updatedAt: string;
 }
