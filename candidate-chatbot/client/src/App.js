@@ -14,24 +14,47 @@ function App() {
     setInput('');
     
     try {
-      // Call backend API (replace with your actual API endpoint)
-      const response = await fetch('http://localhost:3001/api/chat', {
+      // Call backend API with the correct endpoint
+      const response = await fetch('http://localhost:3001/api/conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ jobId: 'sample-job-id' }),
       });
       
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error('Failed to start conversation');
+      }
+      
+      const { conversationId } = await response.json();
+      
+      // Send the message to the conversation
+      const messageResponse = await fetch(`http://localhost:3001/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: input }),
+      });
+      
+      if (!messageResponse.ok) {
+        throw new Error('Failed to send message');
+      }
+      
+      const conversation = await messageResponse.json();
+      const botMessage = conversation.messages[conversation.messages.length - 1];
       
       // Add bot response to chat
-      setMessages(prevMessages => [...prevMessages, { text: data.message, sender: 'bot' }]);
+      setMessages(prevMessages => [...prevMessages, { 
+        text: botMessage.content, 
+        sender: 'bot' 
+      }]);
     } catch (error) {
       console.error('Error:', error);
       // Add error message
       setMessages(prevMessages => [...prevMessages, { 
-        text: 'Sorry, there was an error processing your request.', 
+        text: 'Sorry, there was an error processing your request. ' + error.message, 
         sender: 'bot' 
       }]);
     }
