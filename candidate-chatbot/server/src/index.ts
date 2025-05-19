@@ -28,5 +28,5 @@ app.get('/api/conversations/:conversationId/profile', conversationController.get
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
