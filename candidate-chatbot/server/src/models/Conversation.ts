@@ -1,3 +1,5 @@
+import { CandidateProfile, ProfileExtraction } from "./CandidateProfile";
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
