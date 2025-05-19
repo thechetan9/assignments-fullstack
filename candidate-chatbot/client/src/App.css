@@ -3,39 +3,44 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .App-header {
-  background-color: #282c34;
+  background: linear-gradient(135deg, #4a90e2, #6a5acd);
   padding: 20px;
   color: white;
-  border-radius: 8px 8px 0 0;
+  border-radius: 12px 12px 0 0;
   margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .App-main {
   display: flex;
-  height: calc(100vh - 80px);
-  padding: 20px;
-  gap: 20px;
+  height: calc(100vh - 140px); /* Reduced from 100px to give more space */
+  padding: 0;
+  gap: 24px;
 }
 
 .chat-container {
   flex: 2;
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  background-color: white;
+  max-height: calc(100vh - 140px); /* Add max-height to prevent overflow */
 }
 
 .profile-container {
   flex: 1;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 24px;
   overflow-y: auto;
-  background-color: #f9f9f9;
+  background-color: white;
+  max-height: calc(100vh - 140px); /* Add max-height to match chat container */
 }
 
 .chat-window {
@@ -47,34 +52,51 @@
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background-color: #f5f5f5;
+  padding: 24px;
+  background-color: #f8f9fa;
+  max-height: calc(100vh - 240px); /* Limit height to ensure input is visible */
 }
 
 .input-area {
   display: flex;
-  padding: 15px;
+  padding: 16px;
   background-color: white;
   border-top: 1px solid #eee;
+  position: sticky; /* Make input area stick to bottom */
+  bottom: 0;
+  z-index: 10;
 }
 
 .input-area input {
   flex: 1;
-  padding: 10px 15px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+.input-area input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
 
 .input-area button {
-  margin-left: 10px;
-  padding: 10px 20px;
+  margin-left: 12px;
+  padding: 12px 24px;
   background-color: #4a90e2;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.input-area button:hover {
+  background-color: #3a80d2;
 }
 
 .input-area button:disabled {
@@ -84,11 +106,13 @@
 
 .message {
   display: flex;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  max-width: 80%;
 }
 
 .message.user {
   flex-direction: row-reverse;
+  margin-left: auto;
 }
 
 .message-avatar {
@@ -96,62 +120,125 @@
   height: 40px;
   border-radius: 50%;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 12px;
+  font-size: 20px;
 }
 
-.user {
-  background-color: #0084ff;
+.message-content {
+  padding: 12px 16px;
+  border-radius: 18px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.user .message-content {
+  background-color: #4a90e2;
   color: white;
-  margin-left: auto;
+  border-radius: 18px 18px 0 18px;
 }
 
-.bot {
-  background-color: #e5e5ea;
-  color: black;
+.bot .message-content {
+  background-color: #f0f2f5;
+  color: #333;
+  border-radius: 18px 18px 18px 0;
 }
 
-.error-message {
-  text-align: center;
-  padding: 20px;
-  margin: 20px;
-  background-color: #ffebee;
-  border: 1px solid #ffcdd2;
-  border-radius: 4px;
-  color: #c62828;
-}
-
-.welcome-message {
-  text-align: center;
-  padding: 20px;
-  margin: 20px;
-  color: #666;
+.message-time {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+  opacity: 0.7;
 }
 
 .candidate-profile {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  text-align: left;
+  border: none;
+  border-radius: 12px;
+  padding: 20px;
+  background-color: white;
 }
 
 .candidate-profile h2 {
   margin-top: 0;
   color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 12px;
+  font-weight: 600;
 }
 
-.no-data {
-  color: #888;
-  font-style: italic;
+.profile-completion {
+  margin: 20px 0;
 }
 
-.profile-content {
+.completion-bar {
+  height: 8px;
+  background-color: #f0f2f5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.completion-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a90e2, #6a5acd);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.profile-fields {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
 }
 
-.profile-item {
-  padding: 5px 0;
+.profile-field {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.profile-field h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #555;
+}
+
+.profile-field p {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-tag {
+  background-color: #e1effe;
+  color: #4a90e2;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .App-main {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .chat-container, .profile-container {
+    width: 100%;
+  }
+  
+  .profile-container {
+    margin-top: 20px;
+  }
+  
+  .message {
+    max-width: 90%;
+  }
 }

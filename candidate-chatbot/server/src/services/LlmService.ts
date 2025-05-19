@@ -12,48 +12,57 @@ export class LlmService {
   
   async generateResponse(conversation: Conversation, jobDescription: JobDescription): Promise<string> {
     try {
-      console.log("Starting to generate response with Gemini API");
-      
-      // Get the Gemini model
       const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       
-      // Format conversation history for the LLM
       const systemPrompt = `You are a helpful recruitment assistant for ${jobDescription.company}. 
         Your job is to answer questions about the ${jobDescription.title} position.
         Be concise, friendly, and informative. Only answer questions related to the job.
-        Job details: ${JSON.stringify(jobDescription)}`;
+        
+        Important guidelines:
+        1. Provide varied responses - never repeat the exact same message twice in a row
+        2. If the candidate shares information about themselves, acknowledge it and relate it to the job requirements
+        3. If you've already asked how you can help, don't ask again - instead, provide specific information about the job
+        4. Ask follow-up questions to gather more information about the candidate's qualifications
+        5. If the candidate has shared skills or experience, mention how they align with the job requirements
+        
+        Job details: ${JSON.stringify(jobDescription)}
+        
+        Candidate profile so far: ${JSON.stringify(conversation.candidateProfile)}`;
       
-      console.log("Conversation history:", JSON.stringify(conversation.messages));
-      
-      // Get the latest user message
       const latestMessage = conversation.messages[conversation.messages.length - 1];
-      console.log("Latest message:", latestMessage.content);
       
-      // For simplicity, let's try a direct generation instead of chat history
-      const prompt = `${systemPrompt}\n\nConversation history:\n${conversation.messages
+      let previousBotMessages = conversation.messages
+        .filter(msg => msg.role === 'assistant')
+        .map(msg => msg.content);
+      
+      let avoidGenericResponse = false;
+      if (previousBotMessages.length > 0) {
+        const lastBotMessage = previousBotMessages[previousBotMessages.length - 1];
+        avoidGenericResponse = lastBotMessage.includes("How can I help you") || 
+                               lastBotMessage.includes("how can I help you");
+      }
+      
+      let additionalContext = "";
+      if (avoidGenericResponse) {
+        additionalContext = "\nNote: Your previous message was a generic 'how can I help' message. " +
+                            "Please provide specific information about the job or ask a specific question about the candidate's qualifications instead.";
+      }
+      
+      const prompt = `${systemPrompt}${additionalContext}\n\nConversation history:\n${conversation.messages
         .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
         .join('\n')}\n\nUser: ${latestMessage.content}\nAssistant:`;
       
-      console.log("Sending prompt to Gemini:", prompt);
-      
-      // Generate response
       const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
-      
-      console.log("Generated response from Gemini:", responseText);
-      return responseText;
+      return result.response.text();
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
       return `I apologize, but I'm having trouble generating a response right now. Can you please try again? Error: ${(error as Error).message}`;
     }
   }
   
   async extractCandidateInfo(message: Message): Promise<ProfileExtraction[]> {
     try {
-      // Get the Gemini model
       const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       
-      // Prepare the prompt for information extraction
       const prompt = `
         Extract the following information from the candidate's message if present:
         - name
@@ -72,35 +81,26 @@ export class LlmService {
         Do not include markdown formatting, code blocks, or any text outside the JSON object.
       `;
       
-      // Generate response
       const result = await model.generateContent(prompt);
       const content = result.response.text();
       
-      console.log("Raw LLM response:", content);
-      
-      // Clean up the response to handle markdown formatting
       let cleanedContent = content;
       if (content.includes('```json')) {
         cleanedContent = content.replace(/```json\s*|\s*```/g, '');
       }
       
-      // Parse the JSON response
       try {
         const parsedResponse = JSON.parse(cleanedContent);
         const extractions = parsedResponse.extractions || [];
         
-        // Add source to each extraction
         return extractions.map((extraction: any) => ({
           ...extraction,
           source: message.content
         }));
       } catch (parseError) {
-        console.error('Error parsing LLM response:', parseError);
-        console.error('Cleaned content was:', cleanedContent);
         return [];
       }
     } catch (error) {
-      console.error('Error calling Gemini API for extraction:', error);
       return [];
     }
   }

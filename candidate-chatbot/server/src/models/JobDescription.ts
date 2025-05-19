@@ -11,8 +11,8 @@ export interface JobDescription {
 
 // Sample job description for demonstration
 export const sampleJobDescription: JobDescription = {
-  title: "Full Stack Developer",
-  company: "TechInnovate Solutions",
+  title: "Senior Full Stack Developer",
+  company: "RapidWeb Solutions",
   location: "Remote (US-based)",
   employmentType: "Full-time",
   description: "We're looking for a skilled Full Stack Developer to join our growing team...",

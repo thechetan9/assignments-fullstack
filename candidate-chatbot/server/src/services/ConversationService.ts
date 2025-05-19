@@ -12,16 +12,12 @@ export class ConversationService {
   constructor(llmService: LlmService) {
     this.llmService = llmService;
     
-    // Add sample job description
-    const jobId = "sample-job-id"; // Use a fixed ID instead of UUID
+    const jobId = "sample-job-id";
     this.jobDescriptions.set(jobId, sampleJobDescription);
-    console.log(`Added job description with ID: ${jobId}`);
   }
   
   createConversation(jobId: string): Conversation {
-    // Check if job ID exists, if not use the sample job ID
     if (!this.jobDescriptions.has(jobId)) {
-      console.log(`Job ID ${jobId} not found, using sample job ID instead`);
       jobId = "sample-job-id";
     }
     
@@ -33,7 +29,6 @@ export class ConversationService {
       jobId
     };
     
-    // Add initial greeting message
     const welcomeMessage: Message = {
       id: uuidv4(),
       role: 'assistant',
@@ -43,6 +38,15 @@ export class ConversationService {
     
     conversation.messages.push(welcomeMessage);
     this.conversations.set(conversation.id, conversation);
+    
+    return conversation;
+  }
+  
+  getConversation(id: string): Conversation {
+    const conversation = this.conversations.get(id);
+    if (!conversation) {
+      throw new Error(`Conversation ${id} not found`);
+    }
     return conversation;
   }
   
@@ -61,12 +65,10 @@ export class ConversationService {
     
     conversation.messages.push(message);
     
-    // If this is a user message, extract candidate information
     if (role === 'user') {
       const extractions = await this.llmService.extractCandidateInfo(message);
       conversation.extractions.push(...extractions);
       
-      // Update candidate profile with new information
       this.updateCandidateProfile(conversation);
     }
     
@@ -81,57 +83,39 @@ export class ConversationService {
     
     let jobDescription = this.jobDescriptions.get(conversation.jobId);
     if (!jobDescription) {
-      console.log(`Job description ${conversation.jobId} not found, using sample job description`);
       jobDescription = sampleJobDescription;
     }
     
-    console.log(`Generating response for conversation ${conversationId}`);
-    
     const responseContent = await this.llmService.generateResponse(conversation, jobDescription);
-    console.log(`Generated response: ${responseContent}`);
     
     return this.addMessage(conversationId, responseContent, 'assistant');
   }
   
-  getConversation(conversationId: string): Conversation | undefined {
-    return this.conversations.get(conversationId);
-  }
-  
-  getCandidateProfile(conversationId: string): CandidateProfile | undefined {
-    const conversation = this.conversations.get(conversationId);
-    return conversation?.candidateProfile;
+  getJobDescriptions(): Map<string, JobDescription> {
+    return this.jobDescriptions;
   }
   
   private updateCandidateProfile(conversation: Conversation): void {
-    // Create a new profile object to avoid direct mutation
     const updatedProfile: CandidateProfile = { ...conversation.candidateProfile };
     
-    // Process each extraction
     for (const extraction of conversation.extractions) {
       const { field, value, confidence } = extraction;
       
-      // Only update if confidence is high enough
       if (confidence < 0.6) continue;
       
-      // Handle array fields specially
       if (field === 'skills') {
         const currentSkills = updatedProfile.skills || [];
-        // Filter out duplicates
         const newSkills = Array.isArray(value) 
           ? value.filter(skill => !currentSkills.includes(skill))
           : [];
         updatedProfile.skills = [...currentSkills, ...newSkills];
       } 
-      // Handle numeric fields
       else if (field === 'yearsOfExperience') {
-        // Only update if the new value is more specific or higher confidence
         if (!updatedProfile.yearsOfExperience || confidence > 0.8) {
           updatedProfile.yearsOfExperience = Number(value);
         }
       }
-      // Handle other fields
       else {
-        // Only update if field is empty or new data has higher confidence
         const existingConfidence = this.getExtractionConfidence(conversation, field);
         if (existingConfidence === 0 || confidence > existingConfidence) {
           (updatedProfile as any)[field] = value;
@@ -139,19 +123,13 @@ export class ConversationService {
       }
     }
     
-    // Update the conversation's candidate profile
     conversation.candidateProfile = updatedProfile;
   }
   
-  // Helper to find the highest confidence for a given field
   private getExtractionConfidence(conversation: Conversation, field: string): number {
     const relevantExtractions = conversation.extractions.filter(e => e.field === field);
     if (relevantExtractions.length === 0) return 0;
     
     return Math.max(...relevantExtractions.map(e => e.confidence));
-  }
-
-  getJobDescriptions(): Map<string, JobDescription> {
-    return this.jobDescriptions;
   }
 }
