@@ -118,11 +118,20 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       if (!conversationId) return;
       
       try {
+        console.log(`Fetching profile for conversation: ${conversationId}`);
         const response = await fetch(`http://localhost:3001/api/conversations/${conversationId}/profile`);
         
         if (response.ok) {
           const data = await response.json();
-          setCandidateProfile(data.profile);
+          console.log('Fetched profile data:', data);
+          if (data && data.profile) {
+            setCandidateProfile(data.profile);
+          } else {
+            console.error('Profile data is missing or invalid:', data);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error('Failed to fetch profile:', response.status, errorText);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -130,7 +139,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     };
     
     fetchProfile();
-  }, [messages, conversationId]);
+  }, [conversationId, messages.length]); // Add messages.length as dependency to update when messages change
 
   const sendMessage = async (content: string) => {
     if (content.trim() === '' || !conversationId || loading) return;

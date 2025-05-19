@@ -98,10 +98,17 @@ export class ConversationService {
   private updateCandidateProfile(conversation: Conversation): void {
     const updatedProfile: CandidateProfile = { ...conversation.candidateProfile };
     
+    console.log('Updating profile with extractions:', conversation.extractions);
+    
     for (const extraction of conversation.extractions) {
       const { field, value, confidence } = extraction;
       
-      if (confidence < 0.6) continue;
+      console.log(`Processing extraction: ${field} = ${value} (confidence: ${confidence})`);
+      
+      if (confidence < 0.6) {
+        console.log(`Skipping low confidence extraction: ${field}`);
+        continue;
+      }
       
       if (field === 'skills') {
         const currentSkills = updatedProfile.skills || [];
@@ -109,20 +116,24 @@ export class ConversationService {
           ? value.filter(skill => !currentSkills.includes(skill))
           : [];
         updatedProfile.skills = [...currentSkills, ...newSkills];
+        console.log('Updated skills:', updatedProfile.skills);
       } 
       else if (field === 'yearsOfExperience') {
         if (!updatedProfile.yearsOfExperience || confidence > 0.8) {
           updatedProfile.yearsOfExperience = Number(value);
+          console.log('Updated years of experience:', updatedProfile.yearsOfExperience);
         }
       }
       else {
         const existingConfidence = this.getExtractionConfidence(conversation, field);
         if (existingConfidence === 0 || confidence > existingConfidence) {
           (updatedProfile as any)[field] = value;
+          console.log(`Updated ${field}:`, (updatedProfile as any)[field]);
         }
       }
     }
     
+    console.log('Final updated profile:', updatedProfile);
     conversation.candidateProfile = updatedProfile;
   }
   

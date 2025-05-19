@@ -102,6 +102,19 @@ app.get('/api/debug/jobs', (req, res) => {
   res.status(200).json({ jobs, count: jobs.length });
 });
 
+app.get('/api/conversations/:id/profile', (req, res) => {
+  try {
+    const { id } = req.params;
+    const conversation = conversationService.getConversation(id);
+    if (!conversation) {
+      return res.status(404).json({ error: `Conversation ${id} not found` });
+    }
+    return res.status(200).json({ profile: conversation.candidateProfile });
+  } catch (error) {
+    return res.status(404).json({ error: (error as Error).message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

@@ -67,13 +67,11 @@ export class ConversationController {
       return;
     }
     
-    const profile = this.conversationService.getCandidateProfile(conversationId);
-    
-    if (!profile) {
-      res.status(404).json({ error: 'Profile not found' });
-      return;
+    try {
+      const conversation = this.conversationService.getConversation(conversationId);
+      res.status(200).json({ profile: conversation.candidateProfile });
+    } catch (error) {
+      res.status(404).json({ error: (error as Error).message });
     }
-    
-    res.status(200).json({ profile });
   }
 }
